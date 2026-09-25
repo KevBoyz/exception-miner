@@ -1,7 +1,10 @@
 import csv
+import io
 import os
 import re
 import logging
+import tokenize
+import pandas as pd
 from tqdm.auto import trange
 
 # this is a hack to fool github servers in believing that this is not a robot
@@ -57,6 +60,32 @@ def batch(iterable, n=1):
     for ndx in pbar:
         pbar.set_description(f"Global ... ")
         yield iterable[ndx:min(ndx + n, l)]
+
+
+PROJECTS_COLUMNS = ["owner", "name", "repo", "source"]
+
+
+def read_projects(input_path):
+    projects = pd.read_csv(input_path, sep=",")
+    if not {"name", "repo"}.issubset(projects.columns):
+        # CSV without header: first row is data, not column names
+        projects = pd.read_csv(input_path, sep=",", header=None, names=PROJECTS_COLUMNS)
+    return projects
+
+
+def to_utf8(content):
+    # Parsed node text is decoded as utf-8 downstream, so normalize the source bytes
+    # first, honoring a PEP 263 coding declaration (e.g. Python 2 latin-1 files)
+    try:
+        content.decode("utf-8")
+        return content
+    except UnicodeDecodeError:
+        pass
+    try:
+        encoding, _ = tokenize.detect_encoding(io.BytesIO(content).readline)
+        return content.decode(encoding).encode("utf-8")
+    except (SyntaxError, UnicodeDecodeError):
+        return content.decode("utf-8", errors="replace").encode("utf-8")
 
 dictionary = {
     "python": {

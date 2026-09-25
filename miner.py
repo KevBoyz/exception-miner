@@ -8,7 +8,7 @@ import pandas as pd
 from pydriller import Git
 from tqdm import tqdm
 
-from utils import create_logger, dictionary
+from utils import create_logger, dictionary, read_projects, to_utf8
 import json
 
 from miner_py_src.java import tree_sitter_java, exception, miner_java_utils
@@ -16,6 +16,7 @@ from miner_py_src.java import stats as java_stats
 from miner_py_src.python import tree_sitter_py, exceptions, miner_py_utils
 from miner_py_src.python import stats as python_stats
 from miner_py_src.python.call_graph import CFG, generate_cfg
+from miner_py_src.python.exceptions import CallGraphError
 from miner_py_src.typescript import tree_sitter_ts, exceptions, miner_ts_utils
 from miner_py_src.typescript import stats as ts_stats
 from multiprocessing import Process
@@ -136,6 +137,7 @@ def collect_parser(files, project_name, language, args):
                     f"###### UnicodeDecodeError Error!!! file: {file_path}.\n{str(ex)}"
                 )
                 continue
+        content = to_utf8(content)
         try:
             tree = parser.parse(content)
         except SyntaxError as ex:
@@ -177,9 +179,14 @@ def collect_parser(files, project_name, language, args):
 
         #!!!!!!!!!!!!!!!!!!
         mainExtension = language["main"]
-        call_graph = generate_cfg(str(project_name), os.path.normpath(
-            f"projects/{mainExtension}/{str(project_name)}"), args.output_dir)
-        
+        try:
+            call_graph = generate_cfg(str(project_name), os.path.normpath(
+                f"projects/{mainExtension}/{str(project_name)}"), args.output_dir)
+        except CallGraphError as ex:
+            logger.warning(
+                f"Exception Miner: call graph failed for {project_name}, continuing without it: {ex}")
+            call_graph = None
+
         if call_graph is None:
             call_graph = {}
 
@@ -273,7 +280,7 @@ def process_language(language, args):
     FunctionDefNotFoundException = module["exception"].FunctionDefNotFoundException
     FileStats = module["stats"].FileStats
 
-    projects = pd.read_csv(args.input_path, sep=",")
+    projects = read_projects(args.input_path)
     for index, row in projects.iterrows():
         files = fetch_repositories(row['name'],row['repo'], language, args)
         if len(files) > 0:
