@@ -22,9 +22,11 @@ from .miner_py_utils import (
 from tqdm import tqdm
 from tree_sitter._binding import Node
 from .miner_py_utils import QUERY_TRY_STMT, QUERY_EXCEPT_CLAUSE
+from .tree_sitter_py import QUERY_EXCEPTION_NODES
 
 
 class FileStats:
+    _no_exception_metrics = None
     num_files = 0
     num_functions = 0
     files_try_except = set()
@@ -72,6 +74,15 @@ class FileStats:
         Return a list of exception handling metrics in the following order: try-except clauses,
             try-pass, generic-except
         """
+        # every metric comes from a try/except/finally/raise node, so all functions without
+        # them get the same result: compute it once instead of running every query
+        if len(QUERY_EXCEPTION_NODES.captures(func_def)) == 0:
+            if FileStats._no_exception_metrics is None:
+                FileStats._no_exception_metrics = self._compute_metrics(func_def)
+            return dict(FileStats._no_exception_metrics)
+        return self._compute_metrics(func_def)
+
+    def _compute_metrics(self, func_def: Node):
         n_try_except, n_try_pass, n_generic_except, n_bare_except = 0, 0, 0, 0
 
         captures_except = get_except_clause(func_def)

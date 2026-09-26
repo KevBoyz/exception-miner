@@ -105,5 +105,7 @@ QUERY_CATCH_ASSIGNMENT_EXPRESSION_LEFT: Query = JAVA_LANGUAGE.query(
         ) @catch.body
     )""")
 
-
-
+# every exception metric is computed from one of these nodes: a function without them
+# has all metrics zeroed (see FileStats.get_metrics)
+QUERY_EXCEPTION_NODES: Query = JAVA_LANGUAGE.query(
+    """[(try_statement) (catch_clause) (finally_clause) (throw_statement)] @exception.node""")

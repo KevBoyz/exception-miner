@@ -65,3 +65,8 @@ QUERY_TRY_RETURN: Query = PY_LANGUAGE.query(
 
 QUERY_FINALLY_BLOCK: Query = PY_LANGUAGE.query(
     """(finally_clause) @finally.stmt""")
+
+# every exception metric is computed from one of these nodes: a function without them
+# has all metrics zeroed (see FileStats.get_metrics)
+QUERY_EXCEPTION_NODES: Query = PY_LANGUAGE.query(
+    """[(try_statement) (except_clause) (finally_clause) (raise_statement)] @exception.node""")

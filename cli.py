@@ -44,6 +44,7 @@ def cmdline_args(argv=None):
     available_languages = ', '.join(dictionary.keys())
     language_help = f'Programming language of the input file(s). Available options: {available_languages}'
     args.add_argument('-lang', '--language', nargs='+', default=['python'], metavar='', help=language_help)
+    args.add_argument('-j', '--jobs', type=int, default=os.cpu_count() or 1, metavar='', help='Number of processes that parse the files, split among the languages (default: number of CPUs)')
     parsed_args = args.parse_args(argv)
     parsed_args.command = 'mine'
 
@@ -63,6 +64,10 @@ def cmdline_args(argv=None):
     # Check if the output directory exists, if not create it
     if not os.path.isdir(parsed_args.output_dir):
         os.makedirs(parsed_args.output_dir)
+
+    if parsed_args.jobs < 1:
+        sys.stderr.write(f"The number of jobs must be at least 1, but got {parsed_args.jobs}\n")
+        sys.exit(1)
 
     # Check if the provided language is supported
     for language in parsed_args.language:

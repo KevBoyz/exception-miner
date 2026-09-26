@@ -86,3 +86,8 @@ QUERY_CATCH_ASSIGNMENT_EXPRESSION_LEFT: Query = TS_LANGUAGE.query(
             )
         )
     )""")
+
+# every exception metric is computed from one of these nodes: a function without them
+# has all metrics zeroed (see FileStats.get_metrics)
+QUERY_EXCEPTION_NODES: Query = TS_LANGUAGE.query(
+    """[(try_statement) (catch_clause) (finally_clause) (throw_statement)] @exception.node""")

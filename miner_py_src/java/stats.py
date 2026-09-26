@@ -28,8 +28,10 @@ from .miner_java_utils import (
 from tqdm import tqdm
 from tree_sitter._binding import Node
 from .miner_java_utils import QUERY_TRY_STMT, QUERY_CATCH_CLAUSE
+from .tree_sitter_java import QUERY_EXCEPTION_NODES
 
 class FileStats:
+    _no_exception_metrics = None
     num_files = 0
     num_functions = 0
     files_try_catch = set()
@@ -56,6 +58,15 @@ class FileStats:
 
                 
     def get_metrics(self, func_def: Node):
+        # every metric comes from a try/catch/finally/throw node, so all functions without
+        # them get the same result: compute it once instead of running every query
+        if len(QUERY_EXCEPTION_NODES.captures(func_def)) == 0:
+            if FileStats._no_exception_metrics is None:
+                FileStats._no_exception_metrics = self._compute_metrics(func_def)
+            return dict(FileStats._no_exception_metrics)
+        return self._compute_metrics(func_def)
+
+    def _compute_metrics(self, func_def: Node):
         n_try_catch, n_generic_catch, = 0, 0
 
         captures_catch = get_catch_clause(func_def)

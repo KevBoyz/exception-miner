@@ -26,6 +26,9 @@ To reproduce the results, follow the instructions below.
 - `<input_path>`: Path to the CSV file that contains the name, repo, and source. This is a required parameter.
 - `<output_dir>`: Path to the output directory. If not provided, the default is `output`.
 - `<language>`: Programming language of the input file(s). Available options are python, typescript. If not provided, the default is `python`.
+- `-j <jobs>`: Number of processes that parse the source files. When several languages are given, the processes are split among them. If not provided, the default is the number of CPUs. Use `-j 1` to parse in a single process.
+
+Projects are cloned into `projects/<language>/<project>` with `git clone --depth 1` (only the checked out files are analyzed, so the history is not downloaded). A project that is already cloned there is not cloned again: remove it (or run `clear -p`) to fetch a fresh copy. While a project is analyzed, the next one in the CSV is already being cloned.
 
 ### Example
 

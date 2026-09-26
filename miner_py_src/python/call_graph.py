@@ -31,56 +31,55 @@ def generate_cfg(project_name, project_folder, output_dir):
     current_path = os.getcwd()
     os.makedirs(
         f'{current_path}/{output_dir}/call_graph/{project_name}', exist_ok=True)
-    os.chdir(os.path.normpath(os.path.join(project_folder)))
+    # no os.chdir: the cwd is shared by the whole process (the next project is cloned by
+    # another thread meanwhile), so PyCG gets the project folder as its own cwd instead
+    project_path = os.path.normpath(project_folder)
+    tqdm.write(f"Generating call graph for {project_name}...")
+
+    # python_src_files = [os.path.abspath(x)
+    #                     for x in glob.iglob(f"./**/{project_src_base}/**/*.py", recursive=True)]
+    # if len(python_src_files) == 0:
+    #     raise CallGraphError(f"No python files found in {project_src_base}")
+
+    #python_src_files = project_src_base
+
+    python_src_files = list_python_files(project_path)
+
+    if len(python_src_files) == 0:
+        raise CallGraphError("No python files found")
+
+    tqdm.write(f'found {len(python_src_files)} files')
+    tqdm.write('Running PyCG...')
+
+    args = [
+        sys.executable, '-c', PYCG_LAUNCHER,
+        *python_src_files[0:4],
+        '--package', project_name,
+        '--max-iter', '1',
+        '--output', f'{current_path}/{output_dir}/call_graph/{project_name}/call_graph.json']
+
+    # TODO: Paralelize? (Too Slow Here...)
+    proc = subprocess.run(args, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, cwd=project_path)
+
+    tqdm.write('PyCG finished')
+
+    if (proc.returncode != 0):
+        raise CallGraphError(proc.stderr.decode('utf-8', errors='replace'))
+
     try:
-        tqdm.write(f"Generating call graph for {project_name}...")
+        open(f'{current_path}/{output_dir}/call_graph/{project_name}/stdout.txt', 'w').write(
+            proc.stdout.decode('utf-8'))
+    except IOError as e:
+        tqdm.write('Could not write stdout.txt')
+        tqdm.write(e.strerror)
 
-        # python_src_files = [os.path.abspath(x)
-        #                     for x in glob.iglob(f"./**/{project_src_base}/**/*.py", recursive=True)]
-        # if len(python_src_files) == 0:
-        #     raise CallGraphError(f"No python files found in {project_src_base}")
-
-        #python_src_files = project_src_base
-
-        python_src_files = list_python_files('.')
-
-        if len(python_src_files) == 0:
-            raise CallGraphError("No python files found")
-
-        tqdm.write(f'found {len(python_src_files)} files')
-        tqdm.write('Running PyCG...')
-
-        args = [
-            sys.executable, '-c', PYCG_LAUNCHER,
-            *python_src_files[0:4],
-            '--package', project_name,
-            '--max-iter', '1',
-            '--output', f'{current_path}/{output_dir}/call_graph/{project_name}/call_graph.json']
-
-        # TODO: Paralelize? (Too Slow Here...)
-        proc = subprocess.run(args, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-
-        tqdm.write('PyCG finished')
-
-        if (proc.returncode != 0):
-            raise CallGraphError(proc.stderr.decode('utf-8', errors='replace'))
-
-        try:
-            open(f'{current_path}/{output_dir}/call_graph/{project_name}/stdout.txt', 'w').write(
-                proc.stdout.decode('utf-8'))
-        except IOError as e:
-            tqdm.write('Could not write stdout.txt')
-            tqdm.write(e.strerror)
-
-        try:
-            open(f'{current_path}/{output_dir}/call_graph/{project_name}/stderr.txt', 'w').write(
-                proc.stderr.decode('utf-8'))
-        except IOError as e:
-            tqdm.write('Could not write stderr.txt')
-            tqdm.write(e.strerror)
-    finally:
-        os.chdir(current_path)
+    try:
+        open(f'{current_path}/{output_dir}/call_graph/{project_name}/stderr.txt', 'w').write(
+            proc.stderr.decode('utf-8'))
+    except IOError as e:
+        tqdm.write('Could not write stderr.txt')
+        tqdm.write(e.strerror)
 
     json_obj = json.load(
         open(f'{current_path}/{output_dir}/call_graph/{project_name}/call_graph.json'))
