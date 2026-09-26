@@ -4,6 +4,25 @@ import pathlib
 from subprocess import call
 from typing import List
 from cli import cmdline_args
+from utils import clear_directory, clear_projects
+
+
+def clear(args):
+    removed = clear_directory(args.output_dir)
+    if args.projects:
+        removed += clear_projects()
+    for path in removed:
+        print(f"Removed {path}")
+    print(f"Clear finished: {len(removed)} item(s) removed")
+
+# clear runs before the imports below: it needs none of the parsers, and loading them
+# is slow and prints a tree-sitter FutureWarning
+if __name__ == "__main__":
+    args = cmdline_args()
+    if args.command == 'clear':
+        clear(args)
+        sys.exit(0)
+
 import pandas as pd
 from pydriller import Git
 from tqdm import tqdm
@@ -287,7 +306,7 @@ def process_language(language, args):
             collect_parser(files, row['name'], language, args)
 
 if __name__ == "__main__":
-    args = cmdline_args()
+    # args were parsed at the top of the file
     languages = check_language(args.language)
 
     processes = []

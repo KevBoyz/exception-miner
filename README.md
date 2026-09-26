@@ -34,6 +34,20 @@ To run the script on a CSV file named `input.csv`, output the results to a direc
 ```bash
 python miner.py -in input.csv -o results -lang python
 ```
+
+### Cleaning previous runs
+
+To start a new run from scratch, remove the results of previous runs with the `clear` command:
+
+```bash
+python miner.py clear -o <output_dir> -p
+```
+
+- `-o <output_dir>`: Output directory whose contents are removed (the directory itself is kept). If not provided, the default is `output`.
+- `-p`: Also remove the cloned projects in `projects/<language>/<project>`, keeping the `projects/<language>` folders. Without it, `projects` is left untouched.
+
+For example, `python miner.py clear -o results -p` empties `results` and removes every cloned project. The command refuses an output directory that contains the working directory or the miner source (e.g. `-o .`).
+
 ## Unit tests
 To run the unit tests, follow the instructions below.
 
